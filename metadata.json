@@ -1,0 +1,6 @@
+{
+  "name": "CariMakan",
+  "description": "Aplikasi food discovery bahasa Indonesia yang lengkap untuk pencarian, detail makanan, dan keranjang belanja.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
