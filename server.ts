@@ -11,7 +11,7 @@ import { getCartItems, addToCart, removeFromCart, clearCart } from './src/db/car
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // JSON Body Parser Middleware
   app.use(express.json());
