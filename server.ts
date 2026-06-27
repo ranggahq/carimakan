@@ -5,14 +5,9 @@
 
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { fetchPopularMeals, searchMeals, fetchMealById } from './src/services/mealService.js';
 import { getCartItems, addToCart, removeFromCart, clearCart } from './src/db/cartDb.js';
-
-// Setup __dirname for ESM if needed, though esbuild compiles bundle to CommonJS
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
