@@ -8,6 +8,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { fetchPopularMeals, searchMeals, fetchMealById } from './src/services/mealService.js';
 import { getCartItems, addToCart, removeFromCart, clearCart, updateCartQuantity } from './src/db/cartDb.js';
+import { getOrders, createOrder } from './src/db/orderDb.js';
 
 async function startServer() {
   const app = express();
@@ -149,6 +150,38 @@ async function startServer() {
     } catch (error: any) {
       console.error('Error clearing cart:', error);
       res.status(500).json({ error: 'Gagal mengosongkan keranjang' });
+    }
+  });
+
+  // 9. GET /api/orders (For admin dashboard to fetch user orders)
+  app.get('/api/orders', async (req, res) => {
+    try {
+      const orders = await getOrders();
+      res.json(orders);
+    } catch (error: any) {
+      console.error('Error getting orders:', error);
+      res.status(500).json({ error: 'Gagal mengambil data pesanan' });
+    }
+  });
+
+  // 10. POST /api/orders (When user checks out successfully)
+  app.post('/api/orders', async (req, res) => {
+    try {
+      const { userEmail, userName, items, totalAmount } = req.body;
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        res.status(400).json({ error: 'Item belanja tidak boleh kosong' });
+        return;
+      }
+      const newOrder = await createOrder({
+        userEmail: userEmail || 'guest@carimakan.com',
+        userName: userName || 'Tamu',
+        items,
+        totalAmount: totalAmount || 0
+      });
+      res.status(201).json(newOrder);
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      res.status(500).json({ error: 'Gagal memproses pesanan' });
     }
   });
 

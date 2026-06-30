@@ -8,11 +8,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, ShoppingBag, ArrowLeft, Trash, BookOpen, Clock, CreditCard, ChevronRight, Minus, Plus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { translateCategory, translateArea, getMealPrice, formatPrice } from '../utils';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 export default function Cart() {
   const { cartItems, loading, updateCartQuantity, removeFromCart, clearCart } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
 
@@ -73,6 +76,14 @@ export default function Cart() {
         // Simulate checkout process
         setTimeout(async () => {
           try {
+            // Save order to orderDb on server
+            await axios.post('/api/orders', {
+              userEmail: user?.email || 'guest@carimakan.com',
+              userName: user?.name || 'Tamu',
+              items: cartItems,
+              totalAmount: grandTotal
+            });
+
             await clearCart();
             setIsCheckingOut(false);
             
@@ -87,6 +98,7 @@ export default function Cart() {
               navigate('/home');
             });
           } catch (err) {
+            console.error('Checkout error:', err);
             setIsCheckingOut(false);
             Swal.fire({
               icon: 'error',

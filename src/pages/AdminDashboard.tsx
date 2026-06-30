@@ -54,12 +54,22 @@ function StatCard({ title, value, description, icon, colorClass }: StatCardProps
   );
 }
 
+interface Order {
+  id: string;
+  userEmail: string;
+  userName: string;
+  items: any[];
+  totalAmount: number;
+  createdAt: string;
+}
+
 export default function AdminDashboard() {
   const { user, favorites, searchActivityCount } = useAuth();
   const { cartItems, refreshCart } = useCart();
   const navigate = useNavigate();
 
   const [apiMealsCount, setApiMealsCount] = useState<number>(0);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loadingStats, setLoadingStats] = useState<boolean>(true);
 
   // 1. ROUTE PROTECTION: Redirect if not admin
@@ -86,6 +96,12 @@ export default function AdminDashboard() {
         } else {
           setApiMealsCount(12); // fallback count of initial standard meals
         }
+
+        // Fetch user orders
+        const ordersResponse = await axios.get<Order[]>('/api/orders');
+        if (ordersResponse.data && Array.isArray(ordersResponse.data)) {
+          setOrders(ordersResponse.data);
+        }
       } catch (err) {
         console.error('Failed to fetch api stats for dashboard:', err);
         setApiMealsCount(12); // standard count fallback
@@ -104,9 +120,9 @@ export default function AdminDashboard() {
   }
 
   // Calculate stats
-  const totalCartQty = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  const totalCartValue = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const formattedCartValue = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalCartValue);
+  const totalOrdersCount = orders.length;
+  const totalRevenue = orders.reduce((acc, order) => acc + order.totalAmount, 0);
+  const formattedRevenue = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalRevenue);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex-grow flex flex-col" id="admin-dashboard-root">
@@ -125,7 +141,7 @@ export default function AdminDashboard() {
             Dashboard Admin CariMakan
           </h1>
           <p className="text-xs text-gray-400 mt-1.5">
-            Informasi metrik global, pemantauan pencarian aktif, statistik keranjang belanja, dan resep terfavorit pengguna
+            Informasi metrik global, daftar pesanan masuk dari pelanggan, statistik omset penjualan, dan resep terfavorit pengguna
           </p>
         </div>
         
@@ -160,20 +176,103 @@ export default function AdminDashboard() {
         />
 
         <StatCard 
-          title="Total Item Keranjang"
-          value={`${totalCartQty} Porsi`}
-          description={`Volume belanja aktif: ~${formattedCartValue}`}
+          title="Total Pesanan Selesai"
+          value={`${totalOrdersCount} Pesanan`}
+          description="Berhasil dicheckout oleh pelanggan"
           icon={<ShoppingBag className="h-5.5 w-5.5 text-amber-500" />}
           colorClass="bg-amber-500/10 text-amber-500"
         />
 
         <StatCard 
-          title="Total Aktivitas Pencarian"
-          value={`${searchActivityCount} Pencarian`}
-          description="Frekuensi pencatatan pencarian aktif"
+          title="Total Omset Penjualan"
+          value={formattedRevenue}
+          description="Akumulasi pendapatan checkout"
           icon={<Search className="h-5.5 w-5.5 text-indigo-500" />}
           colorClass="bg-indigo-500/10 text-indigo-500"
         />
+      </div>
+
+      {/* Incoming Orders Section */}
+      <div className="bg-[#161618] border border-gray-800 rounded-3xl p-6 sm:p-7 mb-10" id="incoming-orders-section">
+        <div className="flex items-center justify-between border-b border-gray-800 pb-4 mb-6">
+          <div>
+            <h3 className="font-sans font-extrabold text-lg text-white flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-amber-500" />
+              <span>Daftar Pesanan Masuk (Real-time)</span>
+            </h3>
+            <p className="text-xxs sm:text-xs text-gray-400 mt-1">
+              Daftar seluruh transaksi pemesanan menu resep kuliner yang dicheckout aktif oleh pelanggan CariMakan.
+            </p>
+          </div>
+          <span className="text-[10px] uppercase font-bold font-mono bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-full border border-emerald-500/20 flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+            Live Monitor
+          </span>
+        </div>
+
+        {orders.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 font-sans" id="no-orders-placeholder">
+            <ShoppingBag className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+            <p className="font-bold text-sm text-gray-300">Belum Ada Pesanan Masuk</p>
+            <p className="text-xs text-gray-500 mt-1">Transaksi checkout dari pelanggan akan otomatis tampil secara real-time di sini.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto" id="orders-table-wrapper">
+            <table className="w-full text-left font-sans text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-gray-800 text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                  <th className="py-3 px-4">ID Pesanan</th>
+                  <th className="py-3 px-4">Pelanggan</th>
+                  <th className="py-3 px-4">Menu yang Dipesan</th>
+                  <th className="py-3 px-4 text-right">Total Bayar</th>
+                  <th className="py-3 px-4">Waktu Transaksi</th>
+                  <th className="py-3 px-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800/50">
+                {orders.map((order) => {
+                  const orderDate = new Date(order.createdAt).toLocaleString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+                  return (
+                    <tr key={order.id} className="hover:bg-gray-800/20 transition-colors">
+                      <td className="py-4 px-4 font-mono font-bold text-amber-500">{order.id}</td>
+                      <td className="py-4 px-4">
+                        <div className="font-bold text-white">{order.userName}</div>
+                        <div className="text-gray-500 text-[10px]">{order.userEmail}</div>
+                      </td>
+                      <td className="py-4 px-4 max-w-[280px]">
+                        <div className="space-y-1">
+                          {order.items.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-1 text-gray-300">
+                              <span className="font-bold text-amber-500">{item.quantity}x</span>
+                              <span className="truncate">{item.name}</span>
+                              <span className="text-gray-500 text-[10px]">({item.category})</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right font-extrabold text-emerald-400">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.totalAmount)}
+                      </td>
+                      <td className="py-4 px-4 text-gray-400 font-medium">{orderDate}</td>
+                      <td className="py-4 px-4 text-center">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          Sukses
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Audit Log / Monitoring section */}
