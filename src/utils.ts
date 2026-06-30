@@ -4,3 +4,4 @@
  */
 
 export * from './utils/recipeTranslator';
+export * from './utils/priceHelper';

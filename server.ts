@@ -7,7 +7,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { fetchPopularMeals, searchMeals, fetchMealById } from './src/services/mealService.js';
-import { getCartItems, addToCart, removeFromCart, clearCart } from './src/db/cartDb.js';
+import { getCartItems, addToCart, removeFromCart, clearCart, updateCartQuantity } from './src/db/cartDb.js';
 
 async function startServer() {
   const app = express();
@@ -117,6 +117,27 @@ async function startServer() {
     } catch (error: any) {
       console.error(`Error in DELETE /api/cart/${req.params.id}:`, error);
       res.status(500).json({ error: 'Gagal menghapus item dari keranjang', details: error.message });
+    }
+  });
+
+  // 7.5 PUT /api/cart/:id (Update quantity)
+  app.put('/api/cart/:id', async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { quantity } = req.body;
+      if (quantity === undefined) {
+        res.status(400).json({ error: 'Quantity wajib disertakan' });
+        return;
+      }
+      const item = await updateCartQuantity(id, parseInt(quantity.toString(), 10));
+      if (!item) {
+        res.status(404).json({ error: 'Item keranjang tidak ditemukan' });
+        return;
+      }
+      res.json(item);
+    } catch (error: any) {
+      console.error(`Error in PUT /api/cart/${req.params.id}:`, error);
+      res.status(500).json({ error: 'Gagal memperbarui jumlah item', details: error.message });
     }
   });
 

@@ -11,7 +11,7 @@ import { ArrowLeft, ShoppingCart, Check, Tag, Globe, ListChecks, MessageSquare, 
 import { Meal } from '../types';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { translateCategory, translateArea } from '../utils';
+import { translateCategory, translateArea, getMealPrice, formatPrice } from '../utils';
 
 // High-performance client-side in-memory cache to save loaded meals
 const clientDetailCache: Record<string, Meal> = {};
@@ -248,6 +248,11 @@ export default function FoodDetail() {
             <h1 className="font-sans font-black text-2xl sm:text-3xl lg:text-4xl text-white tracking-tight leading-tight" id="detail-food-name">
               {meal.name}
             </h1>
+
+            {/* Price */}
+            <div className="text-amber-500 font-sans font-black text-xl sm:text-2xl" id="detail-food-price">
+              {formatPrice(getMealPrice(meal.category))}
+            </div>
 
             {/* Deskripsi Singkat Pengantar */}
             <p className="font-sans text-xs sm:text-sm text-gray-400 leading-relaxed">

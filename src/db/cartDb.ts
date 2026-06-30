@@ -6,19 +6,10 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { CartItem } from '../types.js';
+import { getMealPrice } from '../utils/priceHelper.js';
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'cart.json');
-
-// Helper to determine static price in IDR based on meal ID strings (hash of the digit characters)
-export function getMealPrice(mealId: string): number {
-  let numVal = 0;
-  for (let i = 0; i < mealId.length; i++) {
-    numVal += mealId.charCodeAt(i);
-  }
-  // Let the price be in range of Rp 15,000 to Rp 45,000
-  return 15000 + (numVal % 31) * 1000;
-}
 
 async function ensureDbInitialized(): Promise<void> {
   try {
@@ -60,7 +51,7 @@ export async function addToCart(meal: Omit<CartItem, 'id' | 'quantity' | 'price'
   // Check if item already exists by mealId
   const existingIndex = items.findIndex(item => item.mealId === meal.mealId);
   const qtyToAdd = meal.quantity || 1;
-  const price = getMealPrice(meal.mealId);
+  const price = getMealPrice(meal.category);
 
   if (existingIndex !== -1) {
     items[existingIndex].quantity += qtyToAdd;
@@ -92,6 +83,16 @@ export async function removeFromCart(id: string): Promise<CartItem | null> {
   items.splice(index, 1);
   await saveCartItems(items);
   return removedItem;
+}
+
+export async function updateCartQuantity(id: string, quantity: number): Promise<CartItem | null> {
+  const items = await getCartItems();
+  const index = items.findIndex(item => item.id === id);
+  if (index === -1) return null;
+  
+  items[index].quantity = Math.max(1, quantity);
+  await saveCartItems(items);
+  return items[index];
 }
 
 export async function clearCart(): Promise<void> {

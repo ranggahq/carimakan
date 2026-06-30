@@ -9,7 +9,7 @@ import { motion } from 'motion/react';
 import { Eye, ShoppingCart, Globe, Tag, Check } from 'lucide-react';
 import { Meal } from '../types';
 import { useCart } from '../context/CartContext';
-import { translateCategory, translateArea } from '../utils';
+import { translateCategory, translateArea, getMealPrice, formatPrice } from '../utils';
 
 interface FoodCardProps {
   meal: Meal;
@@ -94,6 +94,11 @@ export default function FoodCard({ meal }: FoodCardProps) {
               {meal.name}
             </h3>
           </Link>
+
+          {/* Price */}
+          <div className="pt-1 text-amber-500 font-sans font-bold text-sm" id={`price-${meal.id}`}>
+            {formatPrice(getMealPrice(meal.category))}
+          </div>
         </div>
 
         {/* Action Buttons */}

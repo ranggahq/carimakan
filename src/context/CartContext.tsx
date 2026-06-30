@@ -12,6 +12,7 @@ interface CartContextType {
   loading: boolean;
   error: string | null;
   addToCart: (meal: { mealId: string; name: string; thumbnail: string; category: string; area: string }, quantity?: number) => Promise<void>;
+  updateCartQuantity: (id: string, quantity: number) => Promise<void>;
   removeFromCart: (id: string) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
@@ -20,7 +21,14 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('cartItems');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +37,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const response = await axios.get<CartItem[]>('/api/cart');
       setCartItems(response.data);
+      try {
+        localStorage.setItem('cartItems', JSON.stringify(response.data));
+      } catch (e) {
+        console.error('Failed to save cart to localStorage:', e);
+      }
       setError(null);
     } catch (err: any) {
       console.error('Failed to fetch cart:', err);
@@ -58,6 +71,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateCartQuantity = async (id: string, quantity: number) => {
+    try {
+      setError(null);
+      await axios.put(`/api/cart/${id}`, { quantity });
+      await refreshCart();
+    } catch (err: any) {
+      console.error('Failed to update cart quantity:', err);
+      setError('Gagal memperbarui jumlah item.');
+      throw err;
+    }
+  };
+
   const removeFromCart = async (id: string) => {
     try {
       setError(null);
@@ -76,6 +101,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(null);
       await axios.delete('/api/cart');
       setCartItems([]);
+      try {
+        localStorage.setItem('cartItems', JSON.stringify([]));
+      } catch (e) {
+        console.error('Failed to clear cart localStorage:', e);
+      }
     } catch (err: any) {
       console.error('Failed to clear cart:', err);
       setError('Gagal mengosongkan keranjang.');
@@ -88,7 +118,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <CartContext.Provider value={{ cartItems, loading, error, addToCart, removeFromCart, clearCart, refreshCart }}>
+    <CartContext.Provider value={{ cartItems, loading, error, addToCart, updateCartQuantity, removeFromCart, clearCart, refreshCart }}>
       {children}
     </CartContext.Provider>
   );
